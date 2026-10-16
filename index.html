@@ -3,98 +3,183 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0a0f1e">
+<meta name="theme-color" content="#070b16">
 <title>Proxy IP Board</title>
 <style>
 :root{
-  --bg:#0a0f1e; --card:#101a30; --line:#1e2c4d;
-  --txt:#dbe6ff; --dim:#8fa1c7;
-  --acc:#22d3ee; --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
+  --bg:#070b16; --card:rgba(16,26,48,.72); --line:rgba(56,78,130,.35);
+  --txt:#e2ebff; --dim:#8fa1c7;
+  --acc:#22d3ee; --vio:#a78bfa;
+  --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--txt);
-  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:1100px;margin:0 auto;padding:18px 14px 60px}
-header.top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
-  justify-content:space-between;margin-bottom:6px}
-h1{font-size:22px;margin:0}
-h1 .dot{color:var(--acc)}
-.sub{color:var(--dim);font-size:13px;margin-top:4px}
-.chips{display:flex;gap:8px;flex-wrap:wrap}
-.chip{background:var(--card);border:1px solid var(--line);border-radius:999px;
-  padding:6px 12px;font-size:12.5px;color:var(--dim)}
-.chip b{color:var(--txt)}
-.controls{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
-.controls input,.controls select{background:var(--card);border:1px solid var(--line);
-  color:var(--txt);border-radius:10px;padding:10px 12px;font-size:14px}
-.controls input{flex:1;min-width:180px}
-.btn{background:var(--acc);border:0;color:#04222a;font-weight:700;border-radius:10px;
-  padding:10px 16px;font-size:14px;cursor:pointer}
-.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
-.count{color:var(--dim);font-size:13px;margin:10px 2px}
-.tablewrap{background:var(--card);border:1px solid var(--line);
-  border-radius:14px;overflow:auto}
-table{border-collapse:collapse;width:100%;min-width:780px;font-size:13.5px}
-thead th{position:sticky;top:0;background:#0d1730;text-align:left;padding:12px 10px;
-  color:var(--dim);font-weight:600;white-space:nowrap;
-  border-bottom:1px solid var(--line);z-index:1}
-tbody td{padding:10px;border-bottom:1px solid #16233f;vertical-align:middle}
-tbody tr:hover{background:#13203c}
-.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
-.ipcell{display:flex;align-items:center;gap:8px}
-.copy{background:transparent;border:1px solid var(--line);color:var(--dim);
-  border-radius:8px;padding:4px 9px;cursor:pointer;font-size:13px;line-height:1}
-.copy:hover{color:var(--acc);border-color:var(--acc)}
-.badge{display:inline-block;min-width:46px;text-align:center;padding:3px 8px;
-  border-radius:999px;font-size:12px;font-weight:700}
-.b3{background:rgba(52,211,153,.15);color:var(--ok)}
-.b2{background:rgba(251,191,36,.15);color:var(--warn)}
-.b1{background:rgba(251,146,60,.15);color:#fb923c}
-.b0{background:rgba(248,113,113,.15);color:var(--bad)}
-.lat{color:var(--dim)}
-.lat.fast{color:var(--ok)} .lat.mid{color:var(--warn)}
-.more{display:flex;justify-content:center;padding:16px}
-.foot{color:var(--dim);font-size:12px;margin-top:14px;line-height:1.8}
-.foot a{color:var(--acc)}
+body{
+  margin:0; color:var(--txt); min-height:100vh;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  background:
+    radial-gradient(900px 500px at 12% -5%, rgba(34,211,238,.10), transparent 60%),
+    radial-gradient(800px 500px at 95% 110%, rgba(167,139,250,.10), transparent 60%),
+    var(--bg);
+}
+.wrap{max-width:1120px;margin:0 auto;padding:26px 16px 70px}
+
+/* ---------- hero ---------- */
+.hero{position:relative;overflow:hidden;border:1px solid var(--line);
+  border-radius:22px;padding:28px 26px;margin-bottom:18px;
+  background:linear-gradient(135deg, rgba(34,211,238,.07), rgba(167,139,250,.07)), var(--card);
+  backdrop-filter:blur(8px)}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(500px 200px at 85% 0%, rgba(34,211,238,.14), transparent 70%)}
+.live{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;
+  letter-spacing:.12em;color:var(--ok);text-transform:uppercase;
+  border:1px solid rgba(52,211,153,.35);background:rgba(52,211,153,.08);
+  padding:6px 12px;border-radius:999px;margin-bottom:14px}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--ok);
+  box-shadow:0 0 10px var(--ok);animation:pulse 1.8s infinite}
+@keyframes pulse{50%{opacity:.35}}
+h1{margin:0 0 6px;font-size:clamp(26px,4.5vw,38px);font-weight:800;letter-spacing:-.02em}
+h1 .grad{background:linear-gradient(90deg,var(--acc),var(--vio));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--dim);font-size:14px;max-width:640px;line-height:1.6;margin:0}
+.updated-line{margin-top:12px;font-size:12.5px;color:var(--dim)}
+.updated-line b{color:var(--txt)}
+
+/* ---------- stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0 4px}
+.stat{border:1px solid var(--line);border-radius:16px;padding:14px 16px;
+  background:var(--card);backdrop-filter:blur(8px)}
+.stat .v{font-size:24px;font-weight:800;letter-spacing:-.02em}
+.stat .l{font-size:12px;color:var(--dim);margin-top:4px}
+.stat .v.ok{color:var(--ok)} .stat .v.acc{color:var(--acc)}
+.stat .v.vio{color:var(--vio)} .stat .v.warn{color:var(--warn)}
+
+/* ---------- toolbar ---------- */
+.toolbar{position:sticky;top:10px;z-index:5;display:flex;gap:10px;flex-wrap:wrap;
+  margin:18px 0 12px;padding:12px;border:1px solid var(--line);border-radius:16px;
+  background:rgba(10,16,32,.82);backdrop-filter:blur(12px)}
+.search{flex:1;min-width:200px;position:relative}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  width:17px;height:17px;color:var(--dim)}
+.search input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);
+  color:var(--txt);border-radius:12px;padding:11px 12px 11px 38px;font-size:14px;outline:none}
+.search input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(34,211,238,.15)}
+select{background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--txt);
+  border-radius:12px;padding:11px 12px;font-size:14px;outline:none;max-width:220px}
+select option{background:#0d1730}
+.btn{border:0;cursor:pointer;font-weight:700;border-radius:12px;padding:11px 18px;
+  font-size:14px;background:linear-gradient(90deg,var(--acc),#38bdf8);color:#04222a;
+  box-shadow:0 4px 18px rgba(34,211,238,.25);transition:transform .12s}
+.btn:hover{transform:translateY(-1px)}
+.btn.ghost{background:rgba(255,255,255,.05);color:var(--txt);
+  border:1px solid var(--line);box-shadow:none}
+
+/* ---------- table ---------- */
+.count{color:var(--dim);font-size:13px;margin:6px 2px 10px}
+.table-card{border:1px solid var(--line);border-radius:18px;overflow:hidden;
+  background:var(--card);backdrop-filter:blur(8px)}
+.tablewrap{overflow:auto}
+table{border-collapse:collapse;width:100%;min-width:820px;font-size:13.5px}
+thead th{position:sticky;top:0;z-index:2;text-align:left;padding:13px 12px;
+  font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);
+  background:rgba(13,23,48,.92);backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);white-space:nowrap}
+tbody td{padding:11px 12px;border-bottom:1px solid rgba(30,44,77,.5);vertical-align:middle}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:rgba(34,211,238,.05)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:13px;letter-spacing:.01em}
+.ipcell{display:flex;align-items:center;gap:10px}
+.copy{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--dim);
+  border-radius:9px;padding:6px 10px;cursor:pointer;font-size:12.5px;
+  display:inline-flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.copy:hover{color:var(--acc);border-color:var(--acc);box-shadow:0 0 12px rgba(34,211,238,.2)}
+.badge{display:inline-flex;align-items:center;gap:6px;min-width:58px;justify-content:center;
+  padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800}
+.b3{background:rgba(52,211,153,.13);color:var(--ok);border:1px solid rgba(52,211,153,.3)}
+.b2{background:rgba(251,191,36,.12);color:var(--warn);border:1px solid rgba(251,191,36,.3)}
+.b1{background:rgba(251,146,60,.12);color:#fb923c;border:1px solid rgba(251,146,60,.3)}
+.b0{background:rgba(248,113,113,.12);color:var(--bad);border:1px solid rgba(248,113,113,.3)}
+.lat{font-variant-numeric:tabular-nums;color:var(--dim)}
+.lat.fast{color:var(--ok);font-weight:700} .lat.mid{color:var(--warn)}
+.country{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.country .fl{font-size:17px;line-height:1}
+.isp{color:var(--dim);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.more{display:flex;justify-content:center;padding:18px}
+.empty{padding:40px 20px;text-align:center;color:var(--dim)}
+
+/* ---------- footer ---------- */
+.foot{color:var(--dim);font-size:12.5px;margin-top:18px;line-height:1.8;text-align:center}
+.foot a{color:var(--acc);text-decoration:none}
+
+/* ---------- mobile cards ---------- */
+@media (max-width:720px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .toolbar{position:static}
+  select{max-width:none;flex:1}
+  .table-card{background:transparent;border:0;backdrop-filter:none}
+  .tablewrap{overflow:visible}
+  table{min-width:0}
+  thead{display:none}
+  table,tbody,tr,td{display:block;width:100%}
+  tbody tr{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    margin-bottom:12px;padding:4px 2px;backdrop-filter:blur(8px)}
+  tbody tr:hover{background:var(--card)}
+  tbody td{border:0;display:flex;justify-content:space-between;align-items:center;
+    gap:12px;padding:9px 14px;text-align:right}
+  tbody td::before{content:attr(data-label);color:var(--dim);font-size:11.5px;
+    text-transform:uppercase;letter-spacing:.08em;text-align:left}
+  td.rownum{display:none}
+  .isp{max-width:55%}
+}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="top">
-    <div>
-      <h1><span class="dot">●</span> Proxy IP Board</h1>
-      <div class="sub">Auto-updated proxy IP list — health &amp; latency checked every 6 hours</div>
-    </div>
-    <div class="chips">
-      <div class="chip">Updated <b id="updated">…</b></div>
-      <div class="chip"><b id="stTotal">…</b> IPs</div>
-      <div class="chip"><b id="stHealthy">…</b> healthy</div>
-    </div>
-  </header>
 
-  <div class="controls">
-    <input id="q" type="search" placeholder="Search IP, country, city, ISP…">
-    <select id="country"><option value="">All countries</option></select>
-    <button class="btn ghost" id="copyAll">Copy healthy IPs</button>
+  <section class="hero">
+    <span class="live"><i></i>Live · updates every 6 hours</span>
+    <h1>Proxy <span class="grad">IP</span> Board</h1>
+    <p class="sub">Fresh proxy IPs, health-checked and latency-tested around the clock.
+      Pick the fastest ones for your panel — no login needed.</p>
+    <div class="updated-line">Updated <b id="updated">…</b> · next scan <b id="next">…</b></div>
+  </section>
+
+  <section class="stats">
+    <div class="stat"><div class="v acc" id="stTotal">…</div><div class="l">IPs tracked</div></div>
+    <div class="stat"><div class="v ok" id="stHealthy">…</div><div class="l">Healthy now</div></div>
+    <div class="stat"><div class="v warn" id="stLat">…</div><div class="l">Avg latency (healthy)</div></div>
+    <div class="stat"><div class="v vio" id="stCountries">…</div><div class="l">Countries</div></div>
+  </section>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+      </svg>
+      <input id="q" type="search" placeholder="Search IP, country, city, ISP…" autocomplete="off">
+    </div>
+    <select id="country"><option value="">🌍 All countries</option></select>
+    <button class="btn" id="copyTop">Copy top 50</button>
   </div>
   <div class="count" id="count">Loading…</div>
 
-  <div class="tablewrap">
-    <table>
-      <thead><tr>
-        <th>#</th><th>Proxy IP</th><th>Health</th><th>Latency (ms)</th>
-        <th>Country</th><th>City</th><th>ISP</th>
-      </tr></thead>
-      <tbody id="rows"></tbody>
-    </table>
+  <div class="table-card">
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Proxy IP</th><th>Health</th><th>Latency</th>
+          <th>Country</th><th>City</th><th>ISP</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
     <div class="more"><button class="btn ghost" id="moreBtn">Show more</button></div>
   </div>
 
   <div class="foot">
     Source: <a href="https://github.com/NiREvil/vless" target="_blank" rel="noopener">NiREvil/vless</a>
-    daily proxy list. Health = successful TCP connects to port 443 (out of 3).
-    Latency is measured from the scan server — good for comparing IPs; your own ping may differ.<br>
-    Tap ⧉ to copy an IP.
+    daily proxy list · Health = successful TCP connects to port 443 (out of 3) ·
+    latency measured from the scan server — good for comparing, your own ping may differ.
   </div>
 </div>
 
@@ -103,6 +188,12 @@ const PER_PAGE = 150;
 let items = [], filtered = [], shown = 0;
 const $ = id => document.getElementById(id);
 
+/* country code -> flag emoji */
+function flag(cc){
+  if(!cc || cc.length !== 2) return "";
+  const A = 0x1F1E6;
+  return String.fromCodePoint(...[...cc.toUpperCase()].map(c => A + c.charCodeAt(0) - 65));
+}
 function ago(iso){
   if(!iso) return "never";
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -110,6 +201,11 @@ function ago(iso){
   if(s < 3600) return Math.floor(s/60) + " min ago";
   if(s < 86400) return Math.floor(s/3600) + " h ago";
   return Math.floor(s/86400) + " d ago";
+}
+function until(ts){
+  const s = Math.max(0, (ts - Date.now()) / 1000);
+  if(s < 3600) return "in ~" + Math.max(1, Math.floor(s/60)) + " min";
+  return "in ~" + Math.floor(s/3600) + "h " + Math.floor(s%3600/60) + "m";
 }
 function esc(s){
   return String(s ?? "").replace(/[&<>"]/g,
@@ -122,23 +218,28 @@ function healthBadge(h, of){
 function latCell(ms){
   if(ms == null) return `<span class="lat">—</span>`;
   const cls = ms < 300 ? "fast" : ms < 800 ? "mid" : "";
-  return `<span class="lat ${cls}">${Math.round(ms)}</span>`;
+  return `<span class="lat ${cls}">${Math.round(ms)} ms</span>`;
+}
+function countryCell(it){
+  const f = flag(it.cc);
+  const name = esc(it.country) || "—";
+  return `<span class="country">${f ? `<span class="fl">${f}</span>` : ""}<span>${name}</span></span>`;
 }
 function rowHtml(it, n){
   return `<tr>
-    <td class="lat">${n}</td>
-    <td><span class="ipcell"><span class="mono">${esc(it.ip)}</span>`
-    + `<button class="copy" data-ip="${esc(it.ip)}" title="Copy IP">⧉</button></span></td>
-    <td>${healthBadge(it.health, it.of)}</td>
-    <td>${latCell(it.latency)}</td>
-    <td>${esc(it.country) || "—"}</td>
-    <td>${esc(it.city) || "—"}</td>
-    <td class="lat">${esc(it.isp) || "—"}</td>
+    <td class="rownum lat" data-label="#">${n}</td>
+    <td data-label="Proxy IP"><span class="ipcell"><span class="mono">${esc(it.ip)}</span>`
+    + `<button class="copy" data-ip="${esc(it.ip)}">⧉ Copy</button></span></td>
+    <td data-label="Health">${healthBadge(it.health, it.of)}</td>
+    <td data-label="Latency">${latCell(it.latency)}</td>
+    <td data-label="Country">${countryCell(it)}</td>
+    <td data-label="City">${esc(it.city) || "—"}</td>
+    <td data-label="ISP"><span class="isp" title="${esc(it.isp)}">${esc(it.isp) || "—"}</span></td>
   </tr>`;
 }
 function updateCount(){
   $("count").textContent =
-    `Showing ${Math.min(shown, filtered.length)} of ${filtered.length.toLocaleString()} IPs`;
+    `Showing ${Math.min(shown, filtered.length).toLocaleString()} of ${filtered.length.toLocaleString()} IPs`;
   $("moreBtn").style.display = shown < filtered.length ? "" : "none";
 }
 function renderMore(){
@@ -159,6 +260,12 @@ function applyFilters(){
   });
   shown = 0;
   $("rows").innerHTML = "";
+  if(!filtered.length){
+    $("rows").innerHTML = `<tr><td colspan="7"><div class="empty">No IPs match your search.</div></td></tr>`;
+    $("count").textContent = "Showing 0 of 0 IPs";
+    $("moreBtn").style.display = "none";
+    return;
+  }
   renderMore();
 }
 async function copyText(t, btn, doneLabel){
@@ -169,17 +276,17 @@ async function copyText(t, btn, doneLabel){
     document.execCommand("copy"); ta.remove();
   }
   const old = btn.innerHTML;
-  btn.innerHTML = doneLabel || "✓";
-  setTimeout(() => { btn.innerHTML = old; }, 1200);
+  btn.innerHTML = doneLabel || "✓ Copied";
+  setTimeout(() => { btn.innerHTML = old; }, 1400);
 }
 document.addEventListener("click", e => {
   const b = e.target.closest(".copy");
   if(b) copyText(b.dataset.ip, b);
 });
-$("copyAll").addEventListener("click", e => {
+$("copyTop").addEventListener("click", e => {
   const list = filtered.filter(it => it.health > 0)
-    .slice(0, 500).map(it => it.ip).join("\n");
-  if(list) copyText(list, e.currentTarget, "Copied ✓");
+    .slice(0, 50).map(it => it.ip).join("\n");
+  if(list) copyText(list, e.currentTarget, "✓ Copied 50");
 });
 $("q").addEventListener("input", applyFilters);
 $("country").addEventListener("change", applyFilters);
@@ -191,12 +298,23 @@ async function load(){
     const j = await r.json();
     items = j.items || [];
     $("updated").textContent = ago(j.updated_at);
+    if(j.updated_at)
+      $("next").textContent = until(new Date(j.updated_at).getTime() + 6*3600*1000);
+    else $("next").textContent = "soon";
+
+    const healthy = items.filter(i => i.health > 0);
+    const lats = healthy.map(i => i.latency).filter(v => v != null);
     $("stTotal").textContent = (j.total ?? items.length).toLocaleString();
-    $("stHealthy").textContent = (j.healthy ?? 0).toLocaleString();
-    const countries = [...new Set(items.map(i => i.country).filter(Boolean))].sort();
-    for(const c of countries){
+    $("stHealthy").textContent = (j.healthy ?? healthy.length).toLocaleString();
+    $("stLat").textContent = lats.length
+      ? Math.round(lats.reduce((a,b) => a+b, 0) / lats.length) + " ms" : "—";
+    const cmap = new Map();
+    for(const i of items) if(i.country) cmap.set(i.country, i.cc || "");
+    $("stCountries").textContent = cmap.size.toLocaleString();
+    for(const [name, cc] of [...cmap.entries()].sort((a,b) => a[0].localeCompare(b[0]))){
       const o = document.createElement("option");
-      o.value = c; o.textContent = c;
+      o.value = name;
+      o.textContent = (flag(cc) ? flag(cc) + " " : "") + name;
       $("country").appendChild(o);
     }
     if(!items.length){
