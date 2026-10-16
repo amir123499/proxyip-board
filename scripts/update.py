@@ -15,7 +15,7 @@ import time
 import urllib.request
 
 DAILY_URL = "https://raw.githubusercontent.com/NiREvil/vless/main/sub/ProxyIP-Daily.md"
-GEO_URL = "http://ip-api.com/batch?fields=query,status,country,city,isp"
+GEO_URL = "http://ip-api.com/batch?fields=query,status,country,countryCode,city,isp"
 ATTEMPTS = 3
 TIMEOUT = 3.0
 CONCURRENCY = 400
@@ -119,6 +119,7 @@ def geo_lookup(ips):
                     if row.get("status") == "success":
                         out[row["query"]] = {
                             "country": row.get("country") or "",
+                            "cc": (row.get("countryCode") or "").upper(),
                             "city": row.get("city") or "",
                             "isp": row.get("isp") or "",
                         }
@@ -154,6 +155,7 @@ def main():
             "of": ATTEMPTS,
             "latency": r["latency"],
             "country": g.get("country") or "",
+            "cc": g.get("cc") or "",
             "city": g.get("city") or m.get("city") or "",
             "isp": g.get("isp") or m.get("isp") or "",
         })
