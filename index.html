@@ -160,6 +160,7 @@ tbody tr:hover{background:rgba(34,211,238,.05)}
     </div>
     <select id="country"><option value="">🌍 All countries</option></select>
     <button class="btn" id="copyTop">Copy top 50</button>
+    <button class="btn ghost" id="myPing">📍 Test my ping</button>
   </div>
   <div class="count" id="count">Loading…</div>
 
@@ -167,7 +168,7 @@ tbody tr:hover{background:rgba(34,211,238,.05)}
     <div class="tablewrap">
       <table>
         <thead><tr>
-          <th>#</th><th>Proxy IP</th><th>Health</th><th>Latency</th>
+          <th>#</th><th>Proxy IP</th><th>Health</th><th id="latTh">Latency</th>
           <th>Country</th><th>City</th><th>ISP</th>
         </tr></thead>
         <tbody id="rows"></tbody>
@@ -179,13 +180,17 @@ tbody tr:hover{background:rgba(34,211,238,.05)}
   <div class="foot">
     Source: <a href="https://github.com/NiREvil/vless" target="_blank" rel="noopener">NiREvil/vless</a>
     daily proxy list · Health = successful TCP connects to port 443 (out of 3) ·
-    latency measured from the scan server — good for comparing, your own ping may differ.
+    latency measured from the scan server — good for comparing, your own ping may differ.<br>
+    📍 <b>Test my ping</b> measures the top 200 healthy IPs from <b>your</b> browser and network
+    (time to first response, even on TLS errors) — "timeout" means no response within 8s from your network.
+    A timeout here doesn't necessarily mean the IP is useless as a proxyIP, just unreachable from you right now.
   </div>
 </div>
 
 <script>
 const PER_PAGE = 150;
 let items = [], filtered = [], shown = 0;
+let myPing = null; // {ip: ms|null} measured from the visitor's browser
 const $ = id => document.getElementById(id);
 
 /* country code -> flag emoji */
@@ -215,7 +220,14 @@ function healthBadge(h, of){
   const cls = h === of ? "b3" : h === 2 ? "b2" : h === 1 ? "b1" : "b0";
   return `<span class="badge ${cls}">${h}/${of}</span>`;
 }
-function latCell(ms){
+function latCell(it){
+  if(myPing && it.ip in myPing){
+    const v = myPing[it.ip];
+    if(v == null) return `<span class="lat">timeout</span>`;
+    const cls = v < 500 ? "fast" : v < 1500 ? "mid" : "";
+    return `<span class="lat ${cls}" title="Measured from your browser">~${v} ms</span>`;
+  }
+  const ms = it.latency;
   if(ms == null) return `<span class="lat">—</span>`;
   const cls = ms < 300 ? "fast" : ms < 800 ? "mid" : "";
   return `<span class="lat ${cls}">${Math.round(ms)} ms</span>`;
@@ -231,7 +243,7 @@ function rowHtml(it, n){
     <td data-label="Proxy IP"><span class="ipcell"><span class="mono">${esc(it.ip)}</span>`
     + `<button class="copy" data-ip="${esc(it.ip)}">⧉ Copy</button></span></td>
     <td data-label="Health">${healthBadge(it.health, it.of)}</td>
-    <td data-label="Latency">${latCell(it.latency)}</td>
+    <td data-label="Latency">${latCell(it)}</td>
     <td data-label="Country">${countryCell(it)}</td>
     <td data-label="City">${esc(it.city) || "—"}</td>
     <td data-label="ISP"><span class="isp" title="${esc(it.isp)}">${esc(it.isp) || "—"}</span></td>
@@ -258,6 +270,18 @@ function applyFilters(){
     return (it.ip + " " + it.country + " " + it.city + " " + it.isp)
       .toLowerCase().includes(q);
   });
+  if(myPing){
+    filtered.sort((a, b) => {
+      const x = myPing[a.ip], y = myPing[b.ip];
+      if(x == null && y == null) return 0;
+      if(x == null) return 1;
+      if(y == null) return -1;
+      return x - y;
+    });
+    $("latTh").textContent = "Your ping";
+  } else {
+    $("latTh").textContent = "Latency";
+  }
   shown = 0;
   $("rows").innerHTML = "";
   if(!filtered.length){
@@ -287,6 +311,51 @@ $("copyTop").addEventListener("click", e => {
   const list = filtered.filter(it => it.health > 0)
     .slice(0, 50).map(it => it.ip).join("\n");
   if(list) copyText(list, e.currentTarget, "✓ Copied 50");
+});
+$("myPing").addEventListener("click", async e => {
+  const btn = e.currentTarget;
+  if(myPing){ // clear
+    myPing = null;
+    btn.innerHTML = "📍 Test my ping";
+    applyFilters();
+    return;
+  }
+  const targets = filtered.filter(i => i.health > 0).slice(0, 200);
+  if(!targets.length) return;
+  btn.disabled = true;
+  myPing = {};
+  let done = 0;
+  const CONC = 12, TIMEOUT = 8000;
+  async function ping(ip){
+    const t0 = performance.now();
+    try{
+      const ctrl = new AbortController();
+      const to = setTimeout(() => ctrl.abort(), TIMEOUT);
+      await fetch("https://" + ip + "/__ping__?t=" + Date.now(), {
+        mode: "no-cors", cache: "no-store", signal: ctrl.signal
+      });
+      clearTimeout(to);
+      return Math.round(performance.now() - t0);
+    }catch(err){
+      const ms = Math.round(performance.now() - t0);
+      // even on TLS/cert errors, elapsed time ~= network RTT;
+      // a full-timeout means truly unreachable from this network
+      return ms >= TIMEOUT - 100 ? null : ms;
+    }
+  }
+  const queue = targets.map(t => t.ip);
+  async function worker(){
+    while(queue.length){
+      const ip = queue.shift();
+      myPing[ip] = await ping(ip);
+      done++;
+      btn.textContent = `Testing ${done}/${targets.length}…`;
+    }
+  }
+  await Promise.all(Array.from({length: CONC}, worker));
+  btn.disabled = false;
+  btn.innerHTML = "✕ Clear my ping";
+  applyFilters();
 });
 $("q").addEventListener("input", applyFilters);
 $("country").addEventListener("change", applyFilters);
