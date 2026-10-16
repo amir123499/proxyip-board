@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a0f1e">
+<title>Proxy IP Board</title>
+<style>
+:root{
+  --bg:#0a0f1e; --card:#101a30; --line:#1e2c4d;
+  --txt:#dbe6ff; --dim:#8fa1c7;
+  --acc:#22d3ee; --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:18px 14px 60px}
+header.top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  justify-content:space-between;margin-bottom:6px}
+h1{font-size:22px;margin:0}
+h1 .dot{color:var(--acc)}
+.sub{color:var(--dim);font-size:13px;margin-top:4px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:999px;
+  padding:6px 12px;font-size:12.5px;color:var(--dim)}
+.chip b{color:var(--txt)}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.controls input,.controls select{background:var(--card);border:1px solid var(--line);
+  color:var(--txt);border-radius:10px;padding:10px 12px;font-size:14px}
+.controls input{flex:1;min-width:180px}
+.btn{background:var(--acc);border:0;color:#04222a;font-weight:700;border-radius:10px;
+  padding:10px 16px;font-size:14px;cursor:pointer}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+.count{color:var(--dim);font-size:13px;margin:10px 2px}
+.tablewrap{background:var(--card);border:1px solid var(--line);
+  border-radius:14px;overflow:auto}
+table{border-collapse:collapse;width:100%;min-width:780px;font-size:13.5px}
+thead th{position:sticky;top:0;background:#0d1730;text-align:left;padding:12px 10px;
+  color:var(--dim);font-weight:600;white-space:nowrap;
+  border-bottom:1px solid var(--line);z-index:1}
+tbody td{padding:10px;border-bottom:1px solid #16233f;vertical-align:middle}
+tbody tr:hover{background:#13203c}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+.ipcell{display:flex;align-items:center;gap:8px}
+.copy{background:transparent;border:1px solid var(--line);color:var(--dim);
+  border-radius:8px;padding:4px 9px;cursor:pointer;font-size:13px;line-height:1}
+.copy:hover{color:var(--acc);border-color:var(--acc)}
+.badge{display:inline-block;min-width:46px;text-align:center;padding:3px 8px;
+  border-radius:999px;font-size:12px;font-weight:700}
+.b3{background:rgba(52,211,153,.15);color:var(--ok)}
+.b2{background:rgba(251,191,36,.15);color:var(--warn)}
+.b1{background:rgba(251,146,60,.15);color:#fb923c}
+.b0{background:rgba(248,113,113,.15);color:var(--bad)}
+.lat{color:var(--dim)}
+.lat.fast{color:var(--ok)} .lat.mid{color:var(--warn)}
+.more{display:flex;justify-content:center;padding:16px}
+.foot{color:var(--dim);font-size:12px;margin-top:14px;line-height:1.8}
+.foot a{color:var(--acc)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1><span class="dot">●</span> Proxy IP Board</h1>
+      <div class="sub">Auto-updated proxy IP list — health &amp; latency checked every 6 hours</div>
+    </div>
+    <div class="chips">
+      <div class="chip">Updated <b id="updated">…</b></div>
+      <div class="chip"><b id="stTotal">…</b> IPs</div>
+      <div class="chip"><b id="stHealthy">…</b> healthy</div>
+    </div>
+  </header>
+
+  <div class="controls">
+    <input id="q" type="search" placeholder="Search IP, country, city, ISP…">
+    <select id="country"><option value="">All countries</option></select>
+    <button class="btn ghost" id="copyAll">Copy healthy IPs</button>
+  </div>
+  <div class="count" id="count">Loading…</div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th>#</th><th>Proxy IP</th><th>Health</th><th>Latency (ms)</th>
+        <th>Country</th><th>City</th><th>ISP</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="more"><button class="btn ghost" id="moreBtn">Show more</button></div>
+  </div>
+
+  <div class="foot">
+    Source: <a href="https://github.com/NiREvil/vless" target="_blank" rel="noopener">NiREvil/vless</a>
+    daily proxy list. Health = successful TCP connects to port 443 (out of 3).
+    Latency is measured from the scan server — good for comparing IPs; your own ping may differ.<br>
+    Tap ⧉ to copy an IP.
+  </div>
+</div>
+
+<script>
+const PER_PAGE = 150;
+let items = [], filtered = [], shown = 0;
+const $ = id => document.getElementById(id);
+
+function ago(iso){
+  if(!iso) return "never";
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if(s < 90) return "just now";
+  if(s < 3600) return Math.floor(s/60) + " min ago";
+  if(s < 86400) return Math.floor(s/3600) + " h ago";
+  return Math.floor(s/86400) + " d ago";
+}
+function esc(s){
+  return String(s ?? "").replace(/[&<>"]/g,
+    c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+}
+function healthBadge(h, of){
+  const cls = h === of ? "b3" : h === 2 ? "b2" : h === 1 ? "b1" : "b0";
+  return `<span class="badge ${cls}">${h}/${of}</span>`;
+}
+function latCell(ms){
+  if(ms == null) return `<span class="lat">—</span>`;
+  const cls = ms < 300 ? "fast" : ms < 800 ? "mid" : "";
+  return `<span class="lat ${cls}">${Math.round(ms)}</span>`;
+}
+function rowHtml(it, n){
+  return `<tr>
+    <td class="lat">${n}</td>
+    <td><span class="ipcell"><span class="mono">${esc(it.ip)}</span>`
+    + `<button class="copy" data-ip="${esc(it.ip)}" title="Copy IP">⧉</button></span></td>
+    <td>${healthBadge(it.health, it.of)}</td>
+    <td>${latCell(it.latency)}</td>
+    <td>${esc(it.country) || "—"}</td>
+    <td>${esc(it.city) || "—"}</td>
+    <td class="lat">${esc(it.isp) || "—"}</td>
+  </tr>`;
+}
+function updateCount(){
+  $("count").textContent =
+    `Showing ${Math.min(shown, filtered.length)} of ${filtered.length.toLocaleString()} IPs`;
+  $("moreBtn").style.display = shown < filtered.length ? "" : "none";
+}
+function renderMore(){
+  const slice = filtered.slice(shown, shown + PER_PAGE);
+  $("rows").insertAdjacentHTML("beforeend",
+    slice.map((it, k) => rowHtml(it, shown + k + 1)).join(""));
+  shown += slice.length;
+  updateCount();
+}
+function applyFilters(){
+  const q = $("q").value.trim().toLowerCase();
+  const c = $("country").value;
+  filtered = items.filter(it => {
+    if(c && it.country !== c) return false;
+    if(!q) return true;
+    return (it.ip + " " + it.country + " " + it.city + " " + it.isp)
+      .toLowerCase().includes(q);
+  });
+  shown = 0;
+  $("rows").innerHTML = "";
+  renderMore();
+}
+async function copyText(t, btn, doneLabel){
+  try { await navigator.clipboard.writeText(t); }
+  catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = t; document.body.appendChild(ta); ta.select();
+    document.execCommand("copy"); ta.remove();
+  }
+  const old = btn.innerHTML;
+  btn.innerHTML = doneLabel || "✓";
+  setTimeout(() => { btn.innerHTML = old; }, 1200);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest(".copy");
+  if(b) copyText(b.dataset.ip, b);
+});
+$("copyAll").addEventListener("click", e => {
+  const list = filtered.filter(it => it.health > 0)
+    .slice(0, 500).map(it => it.ip).join("\n");
+  if(list) copyText(list, e.currentTarget, "Copied ✓");
+});
+$("q").addEventListener("input", applyFilters);
+$("country").addEventListener("change", applyFilters);
+$("moreBtn").addEventListener("click", renderMore);
+
+async function load(){
+  try{
+    const r = await fetch("data.json?v=" + Date.now());
+    const j = await r.json();
+    items = j.items || [];
+    $("updated").textContent = ago(j.updated_at);
+    $("stTotal").textContent = (j.total ?? items.length).toLocaleString();
+    $("stHealthy").textContent = (j.healthy ?? 0).toLocaleString();
+    const countries = [...new Set(items.map(i => i.country).filter(Boolean))].sort();
+    for(const c of countries){
+      const o = document.createElement("option");
+      o.value = c; o.textContent = c;
+      $("country").appendChild(o);
+    }
+    if(!items.length){
+      $("count").textContent = "First scan is running — check back soon.";
+      $("moreBtn").style.display = "none";
+      return;
+    }
+    applyFilters();
+  }catch(e){
+    $("count").textContent = "Could not load data.json";
+  }
+}
+load();
+</script>
+</body>
+</html>
